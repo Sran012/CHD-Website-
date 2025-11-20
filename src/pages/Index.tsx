@@ -11,7 +11,7 @@ const Index = () => {
       <Hero />
       <div className="space-y-0">
         <ProductCategoriesSpatial />
-        <ImageGallery />
+        {/* <ImageGallery /> */}
         <QualitySection />
         <AboutSection />
         <ContactSection />
