@@ -334,8 +334,11 @@ const categoryData: Record<string, {
       
       return {
         id: `runner-${slideNum}`,
-        src: getImageUrl('TableRunner', slideNum, 'image_01.jpg'),
+        // Lifestyle image is the PRIMARY/MAIN image
+        src: getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
         images: [
+          // Lifestyle first, then product images (3 images total)
+          getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
           getImageUrl('TableRunner', slideNum, 'image_01.jpg'),
           getImageUrl('TableRunner', slideNum, 'image_02.jpg'),
         ],
