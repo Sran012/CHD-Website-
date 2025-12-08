@@ -343,6 +343,10 @@ const categoryData: Record<string, {
       
       return {
         id: `runner-${slideNum}`,
+        // Lifestyle first, then product images
+        src: getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
+        images: [
+          getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
         // Use product images only (remove baby lifestyle image)
         src: getImageUrl('TableRunner', slideNum, 'image_01.jpg'),
         images: [
