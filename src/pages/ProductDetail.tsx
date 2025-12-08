@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 // Fallback images  
 import rugImage from "@/assets/product-rug.png";
@@ -238,21 +238,21 @@ const productData: Record<string, {
   },
   chairpads: {
     id: "chairpads",
-    name: "Chair Pads",
+    name: "Tote Bags",
     brand: "Creative Home Décor",
-    description: "Comfortable seating solutions",
-    longDescription: "Add comfort to your dining chairs with our chair pads.",
+    description: "Durable everyday tote bags",
+    longDescription: "Reusable, roomy totes designed for daily carry, errands, and travel.",
     images: [chairpadImage, chairpadImage, chairpadImage, chairpadImage],
     features: [
-      "Cushioned comfort",
-      "Tie fasteners",
-      "Reversible designs",
-      "Easy to clean"
+      "Durable handles",
+      "Roomy interior",
+      "Reusable & washable",
+      "Everyday carry"
     ],
-    materials: ["Cotton", "Polyester fill", "Memory foam options"],
+    materials: ["Cotton", "Canvas"],
     sizes: [
-      { size: "Standard chair", inStock: true, left: 12 },
-      { size: "Bar stool", inStock: true, left: 8 }
+      { size: "Medium", inStock: true, left: 12 },
+      { size: "Large", inStock: true, left: 8 }
     ],
     colors: ["Solid colors", "Patterned", "Seasonal designs"],
     rating: 4.5,
@@ -343,11 +343,9 @@ const categoryData: Record<string, {
       
       return {
         id: `runner-${slideNum}`,
-        // Lifestyle image is the PRIMARY/MAIN image
-        src: getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
+        // Use product images only (remove baby lifestyle image)
+        src: getImageUrl('TableRunner', slideNum, 'image_01.jpg'),
         images: [
-          // Lifestyle first, then product images (3 images total)
-          getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
           getImageUrl('TableRunner', slideNum, 'image_01.jpg'),
           getImageUrl('TableRunner', slideNum, 'image_02.jpg'),
         ],
@@ -459,7 +457,7 @@ const categoryData: Record<string, {
     }),
   },
   chairpads: {
-    name: "Chair Pads",
+    name: "Tote Bags",
     products: Array.from({ length: 10 }, (_, i) => {
       const slideNum = i + 1;
       const data = getDataFromJson('chairpad', slideNum) || {};
@@ -471,8 +469,8 @@ const categoryData: Record<string, {
           i % 2 === 0 ? lifestyleChairpad : chairpadImage,
           chairpadImage,
         ],
-        title: `Chair Pad ${slideNum}`,
-        tags: ["decorative", "comfortable", "cushion"],
+        title: `Tote Bag ${slideNum}`,
+        tags: ["tote", "carry", "bag"],
         styleNumber: data.styleNumber,
         productDescription: data.description,
         technique: data.technique,
@@ -489,7 +487,6 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const [showContactForm, setShowContactForm] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0); // Currently displayed image index
-  const intervalRef = useRef<NodeJS.Timeout | null>(null); // For auto-rotation interval
   
   // Contact form state (matching ContactSection)
   const [formData, setFormData] = useState({
@@ -513,43 +510,19 @@ export default function ProductDetail() {
     window.scrollTo(0, 0);
   }, [productId]);
 
-  // Auto-rotate images every 3.5 seconds (balanced timing)
-  useEffect(() => {
-    if (!product || !product.images || product.images.length === 0) return;
-
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    // Set up auto-rotation with balanced interval
-    intervalRef.current = setInterval(() => {
-      setSelectedImageIndex((prev) => (prev + 1) % product.images.length);
-    }, 3500); // 3.5 seconds - balanced timing
-
-    // Cleanup on unmount
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [product]);
-
-  // Handle manual image selection (pauses auto-rotation temporarily)
+  // Handle manual image selection
   const handleImageSelect = (index: number) => {
     setSelectedImageIndex(index);
-    // Reset interval after manual selection
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    // Restart auto-rotation after 6 seconds of manual selection
-    setTimeout(() => {
-      if (product && product.images) {
-        intervalRef.current = setInterval(() => {
-          setSelectedImageIndex((prev) => (prev + 1) % product.images.length);
-        }, 3500); // 3.5 seconds
-      }
-    }, 6000); // Wait 6 seconds before resuming auto-rotation
+  };
+
+  const handlePrevImage = () => {
+    if (!product?.images?.length) return;
+    setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+  };
+
+  const handleNextImage = () => {
+    if (!product?.images?.length) return;
+    setSelectedImageIndex((prev) => (prev + 1) % product.images.length);
   };
 
   if (!category || !product) {
@@ -638,54 +611,78 @@ export default function ProductDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12 lg:items-start">
             {/* Left Side - Product Image Gallery - Mobile optimized */}
             <div className="flex flex-col space-y-3 md:space-y-4 lg:space-y-4 pt-12 md:pt-6 lg:pt-8">
-              {/* Main Image - Auto-rotating with Smooth Crossfade Transition */}
-              <div className="relative w-full aspect-square md:aspect-square lg:aspect-[4/5] lg:max-h-[70vh] rounded-xl md:rounded-2xl overflow-hidden border-2 border-border bg-card shadow-lg group">
-              {/* Static background image to prevent white space */}
-              <img
-                src={product.images[selectedImageIndex]}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover absolute inset-0"
-                aria-hidden="true"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (target.src.endsWith('.jpg')) {
-                    target.src = target.src.replace('.jpg', '.png');
-                  }
-                }}
-              />
-              
-              <AnimatePresence mode="sync" initial={false}>
-                <motion.img
-                  key={selectedImageIndex}
-                  src={product.images[selectedImageIndex]}
-                  alt={`${product.title} - View ${selectedImageIndex + 1}`}
-                  className="w-full h-full object-cover absolute inset-0"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ 
-                    duration: 0.5, 
-                    ease: "easeInOut"
-                  }}
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (target.src.endsWith('.jpg')) {
-                      target.src = target.src.replace('.jpg', '.png');
-                    }
-                  }}
-                />
-              </AnimatePresence>
-              
-              {/* Image Counter Indicator */}
-              <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-background/80 backdrop-blur-sm px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs font-medium border border-border">
-                {selectedImageIndex + 1} / {product.images.length}
-              </div>
+              {/* Main Image - with visible overflow for arrows */}
+              <div className="relative w-full aspect-square md:aspect-square lg:aspect-[4/5] lg:max-h-[70vh]">
+                <div className="relative w-full h-full rounded-xl md:rounded-2xl overflow-hidden border-2 border-border bg-card shadow-lg group">
+                  {/* Static background image to prevent white space */}
+                  <img
+                    src={product.images[selectedImageIndex]}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-contain absolute inset-0 bg-background"
+                    aria-hidden="true"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src.endsWith('.jpg')) {
+                        target.src = target.src.replace('.jpg', '.png');
+                      }
+                    }}
+                  />
+                  
+                  <AnimatePresence mode="sync" initial={false}>
+                    <motion.img
+                      key={selectedImageIndex}
+                      src={product.images[selectedImageIndex]}
+                      alt={`${product.title} - View ${selectedImageIndex + 1}`}
+                      className="w-full h-full object-contain absolute inset-0 bg-background"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ 
+                        duration: 0.5, 
+                        ease: "easeInOut"
+                      }}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (target.src.endsWith('.jpg')) {
+                          target.src = target.src.replace('.jpg', '.png');
+                        }
+                      }}
+                    />
+                  </AnimatePresence>
 
-              {/* Gradient overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-            </div>
+                  {/* Image Counter Indicator */}
+                  <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-background/80 backdrop-blur-sm px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs font-medium border border-border">
+                    {selectedImageIndex + 1} / {product.images.length}
+                  </div>
+
+                  {/* Gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </div>
+
+                {/* Manual navigation arrows (outside the clipped area) */}
+                {product.images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePrevImage}
+                      className="absolute z-20 -left-3 md:-left-6 top-1/2 -translate-y-1/2 p-1 md:p-2 rounded-full bg-background/90 border border-border shadow-lg hover:bg-accent/10 transition-colors"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="w-6 h-6 md:w-7 md:h-7" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextImage}
+                      className="absolute z-20 -right-3 md:-right-6 top-1/2 -translate-y-1/2 p-1 md:p-2 rounded-full bg-background/90 border border-border shadow-lg hover:bg-accent/10 transition-colors"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="w-6 h-6 md:w-7 md:h-7" />
+                    </button>
+                  </>
+                )}
+              </div>
 
             {/* Thumbnail Navigation - Modern Premium Design */}
             <div className="flex gap-2 md:gap-3 justify-center flex-shrink-0">

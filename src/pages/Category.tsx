@@ -107,10 +107,10 @@ const categoryData: Record<string, { name: string; images: Array<{ src: string; 
     ],
   },
   chairpads: {
-    name: "Chair Pads",
+    name: "Tote Bags",
     images: [
-      { src: lifestyleChairpad, title: "Dining Chair Pads in Context", tags: ["dining", "comfortable", "cushion", "chair"] },
-      { src: chairpadImage, title: "Chair Pad Collection", tags: ["chair", "pad", "comfort", "dining"] },
+      { src: lifestyleChairpad, title: "Tote Bags in Use", tags: ["tote", "bag", "carry"] },
+      { src: chairpadImage, title: "Tote Bag Collection", tags: ["tote", "bag", "everyday"] },
     ],
   },
 };
@@ -129,6 +129,7 @@ type Product = {
   tags: string[];
   // Product specifications
   styleNumber?: string; // e.g., "CHD-RG-1120"
+  productDescription?: string; // e.g., "RUG", "CUSHION" (from data.json description field)
   technique?: string; // e.g., "WOVEN"
   content?: string; // e.g., "COTTON + JUTE"
   size?: string; // e.g., "24X36\""
@@ -198,11 +199,9 @@ const categoryData: Record<string, {
       
       return {
         id: `runner-${slideNum}`,
-        // Lifestyle image is the PRIMARY/MAIN image (shown in category grid)
-        src: getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
+        // Use product images only (remove baby lifestyle image)
+        src: getImageUrl('TableRunner', slideNum, 'image_01.jpg'),
         images: [
-          // Lifestyle first, then product images
-          getImageUrlPng('TableRunner', slideNum, 'lifestyle.png'),
           getImageUrl('TableRunner', slideNum, 'image_01.jpg'),
           getImageUrl('TableRunner', slideNum, 'image_02.jpg'),
         ],
@@ -310,7 +309,7 @@ const categoryData: Record<string, {
     })),
   },
   chairpads: {
-    name: "Chair Pads",
+    name: "Tote Bags",
     products: Array.from({ length: 10 }, (_, i) => ({
       id: `chairpad-${i + 1}`,
       src: i % 2 === 0 ? lifestyleChairpad : chairpadImage,
@@ -318,10 +317,10 @@ const categoryData: Record<string, {
         i % 2 === 0 ? lifestyleChairpad : chairpadImage,
         chairpadImage, // Image 2 (replace with actual product image)
       ],
-      title: `Chair Pad Set ${i + 1}`,
-      description: `Comfortable chair pads for your dining chairs. Available in various colors and patterns.`,
-      tags: ["dining", "comfortable", "cushion"],
-      styleNumber: `CHD-CP-${String(i + 1).padStart(4, '0')}`,
+      title: `Tote Bag ${i + 1}`,
+      description: `Durable reusable tote bag for everyday carry, errands, and travel.`,
+      tags: ["tote", "bag", "carry"],
+      styleNumber: `CHD-TB-${String(i + 1).padStart(4, '0')}`,
       technique: "WOVEN",
       content: "COTTON + POLYESTER",
       size: "STANDARD",
@@ -333,6 +332,145 @@ const categoryData: Record<string, {
 
 // Number of products to load initially and on each scroll
 const ITEMS_PER_PAGE = 9;
+
+const ProductCard = ({
+  product,
+  onClick,
+}: {
+  product: Product;
+  onClick: () => void;
+}) => {
+  const images = (product.images && product.images.length > 0)
+    ? (product.id.startsWith("runner") ? product.images : product.images.slice(0, 2))
+    : [product.src];
+  const thumbImages = product.id.startsWith("runner")
+    ? images.slice(0, 3)
+    : images.slice(0, 2);
+
+  const [hovered, setHovered] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [thumbHover, setThumbHover] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Clear any existing timers
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (resumeTimeoutRef.current) {
+      clearTimeout(resumeTimeoutRef.current);
+      resumeTimeoutRef.current = null;
+    }
+
+    if (!hovered || thumbHover || images.length < 2) return;
+
+    // Small delay before resuming auto-rotate after thumbnail hover
+    resumeTimeoutRef.current = setTimeout(() => {
+      intervalRef.current = setInterval(() => {
+        setActiveIdx((prev) => (prev + 1) % images.length);
+      }, 2000); // 2s while hovered
+    }, 400);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+    };
+  }, [hovered, thumbHover, images.length]);
+
+  // Reset to first image when hover ends
+  useEffect(() => {
+    if (!hovered) {
+      setActiveIdx(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+  }, [hovered]);
+
+  const mainImage = images[activeIdx] ?? images[0];
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="group relative aspect-square overflow-hidden bg-card border border-border cursor-pointer transition-all hover:border-accent hover:shadow-lg"
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `url(${mainImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <img
+        key={mainImage}
+        src={mainImage}
+        alt={product.title}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 relative z-10 opacity-100"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          if (target.src.endsWith('.jpg')) {
+            target.src = target.src.replace('.jpg', '.png');
+          } else {
+            target.src = product.src;
+          }
+        }}
+      />
+
+      <div className="absolute inset-0 z-30 bg-gradient-to-t from-background/75 via-background/40 to-transparent transition-opacity duration-300 flex items-end p-6">
+        <div className="flex flex-col items-start gap-2">
+          <div>
+            <h3 className="text-lg font-light text-foreground mb-1 drop-shadow-sm">{product.title}</h3>
+            <div className="flex flex-wrap gap-2">
+              {product.tags.slice(0, 3).map((tag, idx) => (
+                <span key={idx} className="text-xs px-2 py-1 bg-accent text-accent-foreground rounded shadow-sm">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {hovered && thumbImages.length > 1 && (
+            <div className="flex gap-2 bg-background/90 backdrop-blur-md p-2 rounded-xl shadow-md border border-border/60">
+              {thumbImages.map((thumb, idx) => (
+                <button
+                  key={idx}
+                  onMouseEnter={(e) => {
+                    e.stopPropagation();
+                    setThumbHover(true);
+                    setActiveIdx(idx);
+                  }}
+                  onMouseLeave={() => setThumbHover(false)}
+                  className={`w-12 h-12 md:w-14 md:h-14 rounded-lg overflow-hidden border ${activeIdx === idx ? "border-accent" : "border-border"} transition`}
+                >
+                  <img
+                    src={thumb}
+                    alt={`thumb-${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src.endsWith('.jpg')) {
+                        target.src = target.src.replace('.jpg', '.png');
+                      } else {
+                        target.src = product.src;
+                      }
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Category = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -346,15 +484,32 @@ const Category = () => {
 
   const filteredProducts = useMemo(() => {
     if (!category) return [];
-    if (!searchQuery.trim()) return category.products;
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return category.products;
 
-    const query = searchQuery.toLowerCase();
-    return category.products.filter(
-      (product) =>
-        product.title.toLowerCase().includes(query) ||
-        product.description.toLowerCase().includes(query) ||
-        product.tags.some((tag) => tag.toLowerCase().includes(query))
-    );
+    return category.products.filter((product) => {
+      const title = product.title?.toLowerCase() ?? "";
+      const desc = product.description?.toLowerCase() ?? "";
+      const tags = product.tags ?? [];
+      const style = product.styleNumber?.toLowerCase() ?? "";
+      const prodDesc = product.productDescription?.toLowerCase() ?? "";
+      const technique = product.technique?.toLowerCase() ?? "";
+      const content = product.content?.toLowerCase() ?? "";
+      const size = product.size?.toLowerCase() ?? "";
+      const season = product.season?.toLowerCase() ?? "";
+
+      return (
+        title.includes(query) ||
+        desc.includes(query) ||
+        style.includes(query) ||
+        prodDesc.includes(query) ||
+        technique.includes(query) ||
+        content.includes(query) ||
+        size.includes(query) ||
+        season.includes(query) ||
+        tags.some((tag) => (tag ?? "").toLowerCase().includes(query))
+      );
+    });
   }, [category, searchQuery]);
 
   // Products currently visible (paginated)
@@ -500,38 +655,11 @@ const Category = () => {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {visibleProducts.map((product) => (
-                  <div
+                  <ProductCard
                     key={product.id}
+                    product={product}
                     onClick={() => handleProductClick(product.id)}
-                    className="group relative aspect-square overflow-hidden bg-card border border-border cursor-pointer transition-all hover:border-accent hover:shadow-lg"
-                  >
-                    <img
-                      src={product.src}
-                      alt={product.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      onError={(e) => {
-                        // If jpg fails, try png
-                        const target = e.target as HTMLImageElement;
-                        if (target.src.endsWith('.jpg')) {
-                          target.src = target.src.replace('.jpg', '.png');
-                        }
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
-                      <div>
-                        <h3 className="text-lg font-light text-foreground mb-2">{product.title}</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {product.tags.slice(0, 3).map((tag, idx) => (
-                            <span key={idx} className="text-xs px-2 py-1 bg-accent/20 text-accent rounded">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
 
